@@ -1,0 +1,109 @@
+#include <Servo.h>
+
+// --- Pin Definitions ---
+const int waterSensorPin = A0;
+const int buzzerPin = 2;
+const int servoPin1 = 3;
+const int servoPin2 = 5;
+const int servoPin3 = 6;
+const int servoPin4 = 9;
+
+// --- Servo Objects ---
+Servo servo1, servo2, servo3, servo4;
+
+// --- System Variables ---
+bool state = false;
+const int waterLevelThreshold = 250;
+const int delayTime = 20;
+
+void setup() {
+  // Initialize Serial Monitor
+  Serial.begin(9600);
+
+  // Configure Buzzer Pin
+  pinMode(buzzerPin, OUTPUT);
+  digitalWrite(buzzerPin, LOW);
+
+  // Attach Servo Motors to Pins
+  servo1.attach(servoPin1);
+  servo2.attach(servoPin2);
+  servo3.attach(servoPin3);
+  servo4.attach(servoPin4);
+
+  // Initialize Servos to 0 Position
+  servo1.write(0);
+  servo2.write(0);
+  servo3.write(0);
+  servo4.write(0);
+  delay(500);
+
+  // Move servo1 and servo2 to 90 degrees as default
+  servo1.write(90);
+  servo2.write(90);
+}
+
+void gradualMove(Servo &servo, int startPos, int endPos, int stepDelay) {
+  if (startPos < endPos) {
+    for (int pos = startPos; pos <= endPos; pos++) {
+      servo.write(pos);
+      delay(stepDelay);
+    }
+  } else {
+    for (int pos = startPos; pos >= endPos; pos--) {
+      servo.write(pos);
+      delay(stepDelay);
+    }
+  }
+}
+
+void loop() {
+  int waterSensorValue = analogRead(waterSensorPin);
+
+  // Print current water level to Serial Monitor
+  Serial.print("Water level: ");
+  Serial.println(waterSensorValue);
+  delay(1000);
+
+  if (waterSensorValue > waterLevelThreshold && !state) {
+    // Trigger on water level HIGH
+    digitalWrite(buzzerPin, HIGH);
+
+    // Perform servo movement sequence
+    gradualMove(servo1, 90, 0, delayTime);
+    gradualMove(servo2, 90, 0, delayTime);
+    delay(1000);
+
+    gradualMove(servo3, 0, 90, delayTime);
+    gradualMove(servo4, 0, 90, delayTime);
+    delay(1000);
+
+    gradualMove(servo1, 0, 90, delayTime);
+    gradualMove(servo2, 0, 90, delayTime);
+    delay(1000);
+
+    digitalWrite(buzzerPin, LOW);
+    state = true;
+
+  } else if (waterSensorValue <= waterLevelThreshold && state) {
+    // Trigger on water level NORMAL
+    digitalWrite(buzzerPin, HIGH);
+
+    // Reverse servo movement sequence
+    gradualMove(servo1, 90, 0, delayTime);
+    gradualMove(servo2, 90, 0, delayTime);
+    delay(1000);
+
+    gradualMove(servo3, 90, 0, delayTime);
+    gradualMove(servo4, 90, 0, delayTime);
+    delay(1000);
+
+    gradualMove(servo1, 0, 90, delayTime);
+    gradualMove(servo2, 0, 90, delayTime);
+    delay(1000);
+
+    digitalWrite(buzzerPin, LOW);
+    state = false;
+  }
+
+  delay(500);
+}
